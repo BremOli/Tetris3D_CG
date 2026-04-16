@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tetris 3D</title>
+  <style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- Importar Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- Módulos do projeto (ordem importa: definem funções globais) -->
+  <script src="scene.js"></script>
+  <script src="camera.js"></script>
+  <script src="textures.js"></script>
+  <script src="lights.js"></script>
+  <script src="board.js"></script>
+  <script src="controls.js"></script>
+  <script src="pieces.js"></script>
+
+  <!-- Importar o teu código -->
+  <script src="main.js"></script>
+
+</body>
+</html>
