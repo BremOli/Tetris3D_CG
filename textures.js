@@ -40,13 +40,16 @@
 
   function createFloorTexture() {
     return makeCanvasTexture((ctx, s) => {
-      ctx.fillStyle = "#0b1220";
+      const bg = ctx.createLinearGradient(0, 0, s, s);
+      bg.addColorStop(0, "#16082a");
+      bg.addColorStop(1, "#0c0618");
+      ctx.fillStyle = bg;
       ctx.fillRect(0, 0, s, s);
 
       const minor = s / 16;
       const major = s / 4;
 
-      ctx.strokeStyle = "rgba(148,163,184,0.10)";
+      ctx.strokeStyle = "rgba(167,139,250,0.14)";
       ctx.lineWidth = 1;
       for (let i = 0; i <= 16; i++) {
         const p = i * minor;
@@ -54,7 +57,7 @@
         ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(s, p); ctx.stroke();
       }
 
-      ctx.strokeStyle = "rgba(148,163,184,0.22)";
+      ctx.strokeStyle = "rgba(34,211,238,0.18)";
       ctx.lineWidth = 2;
       for (let i = 0; i <= 4; i++) {
         const p = i * major;
@@ -68,15 +71,15 @@
     return makeCanvasTexture((ctx, s) => {
       // Dark CRT-room metal wall
       const g = ctx.createLinearGradient(0, 0, s, s);
-      g.addColorStop(0, "#0f172a");
-      g.addColorStop(1, "#111827");
+      g.addColorStop(0, "#1a0f2e");
+      g.addColorStop(1, "#0f0820");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, s, s);
 
       // Vertical brushed stripes
       for (let x = 0; x < s; x += 4) {
         const alpha = x % 16 === 0 ? 0.12 : 0.05;
-        ctx.fillStyle = `rgba(148,163,184,${alpha})`;
+        ctx.fillStyle = `rgba(192,181,255,${alpha})`;
         ctx.fillRect(x, 0, 1, s);
       }
 

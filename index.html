@@ -3,11 +3,31 @@
 <head>
   <title>Tetris 3D</title>
   <style>
-    body { margin: 0; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      background: radial-gradient(ellipse 140% 90% at 50% 0%, #4c1d95 0%, #312e81 28%, #1e1b4b 55%, #0f0728 100%);
+    }
     canvas { display: block; }
   </style>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
+
+  <div id="start-screen" class="start-screen" aria-label="Ecrã inicial">
+    <div class="start-spotlights" aria-hidden="true">
+      <div class="start-spot start-spot--top"></div>
+      <div class="start-spot start-spot--right"></div>
+      <div class="start-spot start-spot--bottom"></div>
+      <div class="start-spot start-spot--left"></div>
+    </div>
+    <div class="start-shell">
+      <h1 class="start-logo">Tetris</h1>
+      <button type="button" id="start-game-btn" class="start-primary-btn">Start</button>
+    </div>
+  </div>
 
   <!-- Importar Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -21,6 +41,9 @@
   <script src="board.js"></script>
   <script src="controls.js"></script>
   <script src="pieces.js"></script>
+  <script src="game.js"></script>
+  <script src="ui3d.js"></script>
+  <script src="audio.js"></script>
 
   <!-- Importar o teu código -->
   <script src="main.js"></script>

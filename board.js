@@ -37,8 +37,8 @@
     const grid = new THREE.GridHelper(
       Math.max(w, d),
       Math.max(width, depth),
-      0x334155,
-      0x1f2937
+      0x22d3ee,
+      0x7c3aed
     );
     grid.position.set(0, 0.001, 0); // avoid z-fighting with floor
     group.add(grid);
@@ -48,7 +48,7 @@
     const edgesGeo = new THREE.EdgesGeometry(boundsGeo);
     const edges = new THREE.LineSegments(
       edgesGeo,
-      new THREE.LineBasicMaterial({ color: 0x94a3b8 })
+      new THREE.LineBasicMaterial({ color: 0xc4b5fd })
     );
     edges.position.set(0, h / 2, 0);
     group.add(edges);
