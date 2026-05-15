@@ -43,6 +43,8 @@
     dimensions,
     pieceMats,
     dropInterval = 0.6,
+    mode = "normal",
+    timerDurationSec = 120,
     callbacks = {},
   }) {
     const { onPieceLock, onLayersClear } = callbacks;
@@ -56,18 +58,34 @@
     const landedGroup = new THREE.Group();
     landedGroup.name = "landed-blocks";
     scene.add(landedGroup);
+    const ghostGroup = new THREE.Group();
+    ghostGroup.name = "ghost-piece";
+    scene.add(ghostGroup);
 
     const cubeGeo = new THREE.BoxGeometry(cell, cell, cell);
+    const ghostMats = {};
+    for (const [k, mat] of Object.entries(pieceMats)) {
+      ghostMats[k] = mat.clone();
+      ghostMats[k].transparent = true;
+      ghostMats[k].opacity = 0.24;
+      ghostMats[k].depthWrite = false;
+      ghostMats[k].emissiveIntensity = 0.02;
+    }
 
     const state = {
       running: false,
       paused: false,
       gameOver: false,
+      timedOut: false,
       elapsedDrop: 0,
       active: null,
       score: 0,
       level: 1,
       linesClearedTotal: 0,
+      mode,
+      timerDurationSec,
+      timerRemaining: mode === "sprint" ? timerDurationSec : 0,
+      timerActive: mode === "sprint",
       fastDrop: false,
       clearing: null,
       gameOverElapsed: 0,
@@ -119,6 +137,29 @@
         const mesh = new THREE.Mesh(cubeGeo, pieceMats[state.active.type]);
         mesh.position.copy(worldPos(c));
         state.active.group.add(mesh);
+      }
+      rebuildGhostMeshes();
+    }
+
+    function ghostCellsForActive() {
+      if (!state.active) return [];
+      let dy = 0;
+      while (true) {
+        const next = state.active.cells.map((c) => ({ x: c.x, y: c.y - (dy + 1), z: c.z }));
+        if (!canPlace(next)) break;
+        dy++;
+      }
+      return state.active.cells.map((c) => ({ x: c.x, y: c.y - dy, z: c.z }));
+    }
+
+    function rebuildGhostMeshes() {
+      ghostGroup.clear();
+      if (!state.active || state.clearing) return;
+      const cells = ghostCellsForActive();
+      for (const c of cells) {
+        const mesh = new THREE.Mesh(cubeGeo, ghostMats[state.active.type]);
+        mesh.position.copy(worldPos(c));
+        ghostGroup.add(mesh);
       }
     }
 
@@ -220,6 +261,7 @@
         state.gameOver = true;
         state.running = false;
         state.gameOverElapsed = 0;
+        ghostGroup.clear();
         return;
       }
       state.active = active;
@@ -287,6 +329,7 @@
       }
       scene.remove(state.active.group);
       state.active = null;
+      ghostGroup.clear();
       state.score += 10;
       if (typeof onPieceLock === "function") onPieceLock();
       const fullLayers = getFullLayers();
@@ -309,6 +352,7 @@
       landedMap.clear();
       if (state.active) scene.remove(state.active.group);
       state.active = null;
+      ghostGroup.clear();
     }
 
     function start() {
@@ -316,9 +360,12 @@
       state.running = true;
       state.paused = false;
       state.gameOver = false;
+      state.timedOut = false;
       state.score = 0;
       state.level = 1;
       state.linesClearedTotal = 0;
+      state.timerRemaining = state.mode === "sprint" ? state.timerDurationSec : 0;
+      state.timerActive = state.mode === "sprint";
       state.elapsedDrop = 0;
       state.clearFlash = 0;
       state.lastClearedLayers = 0;
@@ -338,6 +385,7 @@
       if (state.clearFlash > 0) state.clearFlash = Math.max(0, state.clearFlash - delta);
       if (state.gameOver) {
         state.gameOverElapsed += delta;
+        ghostGroup.clear();
       }
 
       if (state.clearing) {
@@ -362,6 +410,16 @@
       }
 
       if (!state.running || state.paused || state.gameOver) return;
+      if (state.timerActive) {
+        state.timerRemaining = Math.max(0, state.timerRemaining - delta);
+        if (state.timerRemaining <= 0) {
+          state.running = false;
+          state.paused = false;
+          state.timedOut = true;
+          state.fastDrop = false;
+          return;
+        }
+      }
       const speedMul = state.fastDrop ? 6 : 1;
       state.elapsedDrop += delta * speedMul;
       const stepInterval = dropIntervalForLevel(dropInterval, state.level);

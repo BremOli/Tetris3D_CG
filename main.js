@@ -118,19 +118,63 @@ function updateCameraBlend(delta) {
 applyCameraPreset(currentCameraPreset, false);
 
 const gameAudio = window.createGameAudio();
+const params = new URLSearchParams(window.location.search);
+const requestedMode = params.get("mode");
+const selectedMode = requestedMode === "sprint" ? "sprint" : "normal";
+const requestedDuration = Number(params.get("duration"));
+const allowedSprintDurations = [60, 120, 300];
+const selectedTimerDurationSec =
+  selectedMode === "sprint" && allowedSprintDurations.includes(requestedDuration)
+    ? requestedDuration
+    : 120;
+const hasModeSelection = requestedMode === "normal" || requestedMode === "sprint";
 
 const game = window.createGame({
   scene,
   dimensions,
   pieceMats,
   dropInterval: 0.55,
+  mode: selectedMode,
+  timerDurationSec: selectedTimerDurationSec,
   callbacks: {
     onPieceLock: () => gameAudio.playLock(),
     onLayersClear: (n) => gameAudio.playLayerClear(n),
   },
 });
 
-let hasStartedAtLeastOnce = false;
+let hasStartedAtLeastOnce = hasModeSelection;
+let wasRunningLastFrame = false;
+let lastRunSummary = null;
+
+function rankingBucket(mode, durationSec) {
+  return mode === "sprint" ? `sprint_${durationSec}` : "normal";
+}
+
+function registerRunScore(scoreValue) {
+  const TR = window.TetrisRankings;
+  if (!TR) return { bucket: "", rank: 0, isRecord: false, best: 0 };
+  const score = Number(scoreValue) || 0;
+  const bucket = rankingBucket(game.state.mode, game.state.timerDurationSec);
+  const rankings = TR.load();
+  const current = Array.isArray(rankings[bucket]) ? rankings[bucket] : [];
+  const previousBest = current.length > 0 ? Number(current[0].score) || 0 : -Infinity;
+  const entry = {
+    id: `${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+    score,
+    at: Date.now(),
+  };
+  current.push(entry);
+  current.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+  rankings[bucket] = current.slice(0, 10);
+  TR.save(rankings);
+  const rank = rankings[bucket].findIndex((x) => x.id === entry.id) + 1;
+  return {
+    bucket,
+    rank,
+    isRecord: score > previousBest,
+    best: rankings[bucket].length > 0 ? Number(rankings[bucket][0].score) || score : score,
+  };
+}
 
 const ui3d = window.createUI3D(scene, {
   panelX: dimensions.w * 0.5 + 5.2,
@@ -171,6 +215,8 @@ scoreHud.innerHTML =
   '<span class="score-hud__label">Pontos</span><span class="score-hud__value" id="score-hud-value">0</span>' +
   '<span class="score-hud__label score-hud__label--spaced">Nível</span>' +
   '<span class="score-hud__level" id="score-hud-level">1</span>' +
+  '<span class="score-hud__sub" id="score-hud-mode">Modo: Normal</span>' +
+  '<span class="score-hud__timer" id="score-hud-timer" hidden>Tempo: 00:00</span>' +
   '<span class="score-hud__sub" id="score-hud-lines">0 / 10 linhas para o nível seguinte</span>';
 scoreHud.style.pointerEvents = "none";
 document.body.appendChild(scoreHud);
@@ -185,6 +231,12 @@ document.body.appendChild(partidaHint);
 
 /** Alinhar com `LINES_PER_LEVEL` em game.js */
 const LINES_PER_LEVEL_HUD = 10;
+function formatClock(totalSeconds) {
+  const s = Math.max(0, Math.ceil(totalSeconds));
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
+}
 
 function updateHUD() {
   const valueEl = document.getElementById("score-hud-value");
@@ -197,6 +249,17 @@ function updateHUD() {
   if (linesEl) {
     const p = game.state.linesClearedTotal % LINES_PER_LEVEL_HUD;
     linesEl.textContent = `${p} / ${LINES_PER_LEVEL_HUD} linhas para o nível seguinte`;
+  }
+  const modeEl = document.getElementById("score-hud-mode");
+  if (modeEl) {
+    modeEl.textContent =
+      game.state.mode === "sprint" ? "Modo: Sprint contra-relógio" : "Modo: Normal";
+  }
+  const timerEl = document.getElementById("score-hud-timer");
+  if (timerEl) {
+    const isSprint = game.state.mode === "sprint";
+    timerEl.hidden = !isSprint;
+    if (isSprint) timerEl.textContent = `Tempo: ${formatClock(game.state.timerRemaining)}`;
   }
 
   const startEl = document.getElementById("start-screen");
@@ -243,6 +306,15 @@ btnInfo.setAttribute("aria-label", "Informacao");
 btnInfo.innerHTML =
   '<span class="game-icon-btn__i" aria-hidden="true">i</span>';
 gameToolbar.appendChild(btnInfo);
+
+const btnRanking = document.createElement("button");
+btnRanking.type = "button";
+btnRanking.className = "game-icon-btn";
+btnRanking.title = "Rankings";
+btnRanking.setAttribute("aria-label", "Rankings");
+btnRanking.innerHTML =
+  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M17 4h3v3a5 5 0 0 1-5 5h-1"/><path d="M7 4H4v3a5 5 0 0 0 5 5h1"/><path d="M8 4h8v4a4 4 0 0 1-8 0V4z"/></svg>';
+gameToolbar.appendChild(btnRanking);
 
 const modalCameras = document.createElement("div");
 modalCameras.id = "modal-cameras";
@@ -452,8 +524,35 @@ modalInfo.innerHTML = `
 `;
 document.body.appendChild(modalInfo);
 
+const modalRanking = document.createElement("div");
+modalRanking.id = "modal-ranking";
+modalRanking.className = "game-modal";
+modalRanking.hidden = true;
+modalRanking.setAttribute("aria-hidden", "true");
+modalRanking.setAttribute("role", "dialog");
+modalRanking.setAttribute("aria-modal", "true");
+modalRanking.setAttribute("aria-labelledby", "modal-ranking-title");
+modalRanking.innerHTML = `
+  <div class="game-modal__panel game-modal__panel--wide game-modal__panel--ranking">
+    <button type="button" class="game-modal__close" aria-label="Fechar">&times;</button>
+    <h2 id="modal-ranking-title" class="game-modal__title">Rankings</h2>
+    <p class="game-modal__placeholder ranking-modal-hint">Melhores pontuações guardadas neste dispositivo (todos os modos).</p>
+    <div id="ranking-all" class="ranking-all"></div>
+  </div>
+`;
+document.body.appendChild(modalRanking);
+
+function renderRankingModal() {
+  const root = document.getElementById("ranking-all");
+  const TR = window.TetrisRankings;
+  if (!root || !TR) return;
+  TR.renderFull(root);
+}
+
 setupModal("modal-settings", btnSettings, ".game-modal__close");
 setupModal("modal-info", btnInfo, ".game-modal__close");
+setupModal("modal-ranking", btnRanking, ".game-modal__close");
+btnRanking.addEventListener("click", renderRankingModal);
 
 const modalRestart = document.createElement("div");
 modalRestart.id = "modal-restart";
@@ -497,6 +596,7 @@ function openRestartModal() {
 function requestRestart() {
   if (game.state.gameOver) {
     game.restart();
+    lastRunSummary = null;
     hasStartedAtLeastOnce = true;
     return;
   }
@@ -512,6 +612,7 @@ if (restartConfirmBtn) {
   restartConfirmBtn.addEventListener("click", () => {
     closeRestartModal(false);
     game.restart();
+    lastRunSummary = null;
     hasStartedAtLeastOnce = true;
   });
 }
@@ -571,7 +672,6 @@ function beginPlayFromIntro() {
   el.classList.add("start-screen--hidden");
   document.body.classList.remove("is-intro");
   controls.enabled = true;
-  hasStartedAtLeastOnce = false;
   updateHUD();
   refreshCameraModal();
   gameAudio.resume().then(() => {
@@ -581,7 +681,9 @@ function beginPlayFromIntro() {
 }
 
 if (startGameBtn) {
-  startGameBtn.addEventListener("click", beginPlayFromIntro);
+  startGameBtn.addEventListener("click", () => {
+    window.location.href = "mode-select.html";
+  });
 }
 
 window.addEventListener("keydown", (e) => {
@@ -589,10 +691,12 @@ window.addEventListener("keydown", (e) => {
     const wasOpen =
       !modalSettings.hidden ||
       !modalInfo.hidden ||
+      !modalRanking.hidden ||
       !modalCameras.hidden ||
       !modalRestart.hidden;
     closeModal("modal-settings");
     closeModal("modal-info");
+    closeModal("modal-ranking");
     closeModal("modal-cameras");
     closeModal("modal-restart");
     if (wasOpen) return;
@@ -601,7 +705,7 @@ window.addEventListener("keydown", (e) => {
   if (startScreen && !startScreen.classList.contains("start-screen--hidden")) {
     if (e.code === "Enter" || e.code === "Space") {
       e.preventDefault();
-      beginPlayFromIntro();
+      window.location.href = "mode-select.html";
     }
     return;
   }
@@ -620,6 +724,7 @@ window.addEventListener("keydown", (e) => {
     refreshCameraModal();
   } else if (e.code === "Enter" && !game.state.running) {
     game.start();
+    lastRunSummary = null;
     hasStartedAtLeastOnce = true;
   } else if (e.code === "Escape") {
     game.pauseToggle();
@@ -637,11 +742,30 @@ function animate() {
   updateCameraBlend(delta);
   controls.update();
   game.update(delta);
+  if (
+    wasRunningLastFrame &&
+    !game.state.running &&
+    (game.state.gameOver || game.state.timedOut)
+  ) {
+    lastRunSummary = registerRunScore(game.state.score);
+    renderRankingModal();
+  }
+  if (!wasRunningLastFrame && game.state.running) {
+    lastRunSummary = null;
+  }
+  wasRunningLastFrame = game.state.running;
   updateHUD();
 
   if (game.state.gameOver) {
     statusOverlay.style.display = "flex";
-    statusText.textContent = "GAME OVER — Pressiona R para reiniciar";
+    statusText.textContent = lastRunSummary?.isRecord
+      ? "GAME OVER — NOVO RECORDE! Pressiona R para reiniciar"
+      : "GAME OVER — Pressiona R para reiniciar";
+  } else if (game.state.timedOut) {
+    statusOverlay.style.display = "flex";
+    statusText.textContent = lastRunSummary?.isRecord
+      ? `TEMPO ESGOTADO — ${game.state.score} pontos (NOVO RECORDE!)`
+      : `TEMPO ESGOTADO — ${game.state.score} pontos`;
   } else if (game.state.paused) {
     statusOverlay.style.display = "flex";
     statusText.textContent = "PAUSA";
@@ -664,3 +788,9 @@ function animate() {
 }
 
 animate();
+
+if (hasModeSelection) {
+  beginPlayFromIntro();
+  game.start();
+  lastRunSummary = null;
+}
