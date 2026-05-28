@@ -273,6 +273,57 @@ body.is-intro canvas {
   text-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
 }
 
+/* Proximas pecas — abaixo do HUD de pontuacao */
+.next-piece-hud[hidden] {
+  display: none !important;
+}
+
+.next-piece-hud {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 22;
+  margin-top: calc(14px + 11rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 132px;
+  max-width: min(160px, 94vw);
+  padding: 10px 12px 12px;
+  border-radius: 14px;
+  background: linear-gradient(
+    165deg,
+    rgba(49, 46, 129, 0.92) 0%,
+    rgba(15, 23, 42, 0.96) 55%,
+    rgba(2, 6, 23, 0.98) 100%
+  );
+  border: 1px solid rgba(167, 139, 250, 0.42);
+  box-shadow:
+    0 0 28px rgba(91, 33, 182, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+
+.next-piece-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.next-piece-canvas {
+  display: block;
+  flex: 0 0 auto;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  image-rendering: pixelated;
+}
+
 /* Mensagem para comecar partida — centro-inferior, some ao iniciar */
 .partida-hint[hidden] {
   display: none !important;

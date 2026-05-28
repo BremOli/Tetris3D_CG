@@ -221,6 +221,86 @@ scoreHud.innerHTML =
 scoreHud.style.pointerEvents = "none";
 document.body.appendChild(scoreHud);
 
+const PIECE_PREVIEW_COLORS = {
+  I: "#38bdf8",
+  O: "#fbbf24",
+  T: "#a78bfa",
+  S: "#22c55e",
+  Z: "#ef4444",
+  J: "#3b82f6",
+  L: "#f97316",
+};
+
+const nextPieceHud = document.createElement('div');
+nextPieceHud.className = "next-piece-hud";
+nextPieceHud.innerHTML =
+  '<span class="score-hud__label">Proximas pecas</span>' +
+  '<div class="next-piece-row" role="group" aria-label="Pre-visualizacao das proximas 3 pecas">' +
+  '<canvas class="next-piece-canvas" data-slot="0" width="80" height="80" aria-label="Proxima peca 1"></canvas>' +
+  '<canvas class="next-piece-canvas" data-slot="1" width="80" height="80" aria-label="Proxima peca 2"></canvas>' +
+  '<canvas class="next-piece-canvas" data-slot="2" width="80" height="80" aria-label="Proxima peca 3"></canvas>' +
+  "</div>";
+nextPieceHud.style.pointerEvents = "none";
+document.body.appendChild(nextPieceHud);
+
+const NEXT_PREVIEW_SLOTS = 3;
+
+function drawPieceOnCanvas(canvas, type) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const size = canvas.width;
+  ctx.clearRect(0, 0, size, size);
+
+  const shapes = window.TetrisGameShapes;
+  if (!type || !shapes || !shapes[type]) {
+    ctx.fillStyle = "rgba(148, 163, 184, 0.4)";
+    ctx.font = "600 12px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("—", size / 2, size / 2);
+    return;
+  }
+
+  const cells = shapes[type].map(([x, , z]) => ({ x, z }));
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (const c of cells) {
+    minX = Math.min(minX, c.x);
+    maxX = Math.max(maxX, c.x);
+    minZ = Math.min(minZ, c.z);
+    maxZ = Math.max(maxZ, c.z);
+  }
+  const gridW = maxX - minX + 1;
+  const gridH = maxZ - minZ + 1;
+  const pad = 8;
+  const block = Math.min((size - pad * 2) / gridW, (size - pad * 2) / gridH);
+  const offX = (size - block * gridW) / 2 - minX * block;
+  const offZ = (size - block * gridH) / 2 - minZ * block;
+  const color = PIECE_PREVIEW_COLORS[type] || "#f8fafc";
+
+  for (const c of cells) {
+    const px = offX + c.x * block;
+    const py = offZ + c.z * block;
+    const w = Math.max(1, block - 2);
+    ctx.fillStyle = color;
+    ctx.fillRect(px, py, w, w);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+    ctx.fillRect(px, py, w, Math.max(2, w * 0.28));
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, w - 1, w - 1);
+  }
+}
+
+function drawNextPiecesPreview(queue) {
+  const canvases = nextPieceHud.querySelectorAll(".next-piece-canvas");
+  for (let i = 0; i < NEXT_PREVIEW_SLOTS; i++) {
+    drawPieceOnCanvas(canvases[i], queue?.[i]);
+  }
+}
+
 const partidaHint = document.createElement("div");
 partidaHint.className = "partida-hint";
 partidaHint.id = "partida-hint";
@@ -273,6 +353,11 @@ function updateHUD() {
   if (ui3d && typeof ui3d.setActionVisible === "function") {
     ui3d.setActionVisible("start", !game.state.running);
   }
+
+  if (nextPieceHud) {
+    nextPieceHud.hidden = !introDone;
+  }
+  drawNextPiecesPreview(game.state.nextQueue);
 }
 updateHUD();
 

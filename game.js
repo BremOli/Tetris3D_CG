@@ -79,6 +79,7 @@
       timedOut: false,
       elapsedDrop: 0,
       active: null,
+      nextQueue: [],
       score: 0,
       level: 1,
       linesClearedTotal: 0,
@@ -237,9 +238,23 @@
       }
     }
 
-    function spawn() {
+    function randomPieceType() {
       const types = Object.keys(SHAPES);
-      const type = types[(Math.random() * types.length) | 0];
+      return types[(Math.random() * types.length) | 0];
+    }
+
+    const NEXT_QUEUE_SIZE = 3;
+
+    function refillNextQueue() {
+      while (state.nextQueue.length < NEXT_QUEUE_SIZE) {
+        state.nextQueue.push(randomPieceType());
+      }
+    }
+
+    function spawn() {
+      if (state.nextQueue.length === 0) refillNextQueue();
+      const type = state.nextQueue.shift();
+      refillNextQueue();
       const ox = Math.floor(width / 2);
       const oz = Math.floor(depth / 2);
       const group = new THREE.Group();
@@ -352,6 +367,7 @@
       landedMap.clear();
       if (state.active) scene.remove(state.active.group);
       state.active = null;
+      state.nextQueue = [];
       ghostGroup.clear();
     }
 
@@ -369,6 +385,7 @@
       state.elapsedDrop = 0;
       state.clearFlash = 0;
       state.lastClearedLayers = 0;
+      refillNextQueue();
       spawn();
     }
 
@@ -470,5 +487,6 @@
   }
 
   window.createGame = createGame;
+  window.TetrisGameShapes = SHAPES;
 })();
 
