@@ -21,6 +21,7 @@
     }
     .mode-shell {
       width: min(980px, 100%);
+      box-sizing: border-box;
       border: 1px solid rgba(167, 139, 250, 0.35);
       border-radius: 22px;
       background: linear-gradient(165deg, rgba(49, 46, 129, 0.9), rgba(2, 6, 23, 0.96));
@@ -38,7 +39,7 @@
     }
     .mode-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
       gap: 16px;
       margin-bottom: 20px;
     }
