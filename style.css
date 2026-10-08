@@ -226,8 +226,11 @@ body.is-intro canvas {
   color: #a5b4fc;
 }
 
-.score-hud__label--spaced {
+.score-hud__level-label {
   margin-top: 6px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  line-height: 1.2;
 }
 
 .score-hud__value {

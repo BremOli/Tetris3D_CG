@@ -16,7 +16,7 @@
     let noteIndex = 0;
 
     const settings = {
-      musicVolume: 0.4,
+      musicVolume: 0.2,
       musicMuted: false,
       sfxEnabled: true,
       sfxVolume: 0.55,

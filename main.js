@@ -213,11 +213,11 @@ scoreHud.className = "score-hud";
 scoreHud.setAttribute("aria-live", "polite");
 scoreHud.innerHTML =
   '<span class="score-hud__label">Pontos</span><span class="score-hud__value" id="score-hud-value">0</span>' +
-  '<span class="score-hud__label score-hud__label--spaced">Nível</span>' +
+  '<span class="score-hud__label score-hud__level-label">N\u00EDvel</span>' +
   '<span class="score-hud__level" id="score-hud-level">1</span>' +
   '<span class="score-hud__sub" id="score-hud-mode">Modo: Normal</span>' +
   '<span class="score-hud__timer" id="score-hud-timer" hidden>Tempo: 00:00</span>' +
-  '<span class="score-hud__sub" id="score-hud-lines">0 / 10 linhas para o nível seguinte</span>';
+  '<span class="score-hud__sub" id="score-hud-lines">0 / 10 linhas para o n\u00EDvel seguinte</span>';
 scoreHud.style.pointerEvents = "none";
 document.body.appendChild(scoreHud);
 
@@ -328,7 +328,7 @@ function updateHUD() {
   const linesEl = document.getElementById("score-hud-lines");
   if (linesEl) {
     const p = game.state.linesClearedTotal % LINES_PER_LEVEL_HUD;
-    linesEl.textContent = `${p} / ${LINES_PER_LEVEL_HUD} linhas para o nível seguinte`;
+    linesEl.textContent = `${p} / ${LINES_PER_LEVEL_HUD} linhas para o n\u00EDvel seguinte`;
   }
   const modeEl = document.getElementById("score-hud-mode");
   if (modeEl) {
@@ -400,6 +400,18 @@ btnRanking.setAttribute("aria-label", "Rankings");
 btnRanking.innerHTML =
   '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M17 4h3v3a5 5 0 0 1-5 5h-1"/><path d="M7 4H4v3a5 5 0 0 0 5 5h1"/><path d="M8 4h8v4a4 4 0 0 1-8 0V4z"/></svg>';
 gameToolbar.appendChild(btnRanking);
+
+const btnHome = document.createElement("button");
+btnHome.type = "button";
+btnHome.className = "game-icon-btn";
+btnHome.title = "Voltar a selecao de modo";
+btnHome.setAttribute("aria-label", "Voltar a selecao de modo");
+btnHome.innerHTML =
+  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-6h5v6"/></svg>';
+gameToolbar.appendChild(btnHome);
+btnHome.addEventListener("click", () => {
+  window.location.href = "mode-select.html";
+});
 
 const modalCameras = document.createElement("div");
 modalCameras.id = "modal-cameras";
